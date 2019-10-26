@@ -1,168 +1,108 @@
 import os
 import time
+import sys
 
-#First room where player starts
-def startingroom(inv):
-    print("--Starting Room")
-    print("Obvious Exits: 'North' 'East' 'West'")
-    print("Visible Items: 'Locked Door South'")
-    print("<--------------------------------------------------------------------------->")
+class Adventurer:
+    def __init__(self, starting):
+        self.name = ''
+        self.inv = []
+        self.location = starting
+        self.game_over = False
 
-    #commands the player can use whilst in that room, sends to a diff function which checks
-    #if users input is one of these commands, or a general command
-    commands = ['go north', 'north', 'go east', 'east', 'go west', 'west', 'look']
-    command = selectchoice(commands)
+class Item:
+    def __init__(self, name, info, location):
+        self.name = name
+        self.info = info
+        self.location = world[location]
 
-    #defines each command and runs what the user inputs
-    if(command.lower() == 'go north' or command.lower() == 'north'):
-        os.system('cls')
-        print("You head North\n")
-        time.sleep(1)
-        skullroom(inv)
-    elif(command.lower() == 'go east' or command.lower() == 'east'):
-        os.system('cls')
-        print("You head East\n")
-        time.sleep(1)
-        saferoom(inv)
-    elif(command.lower() == 'go west' or command.lower() == 'west'):
-        os.system('cls')
-        print("You head West\n")
-        time.sleep(1)
-        candleroom(inv)
-    elif(command.lower() == 'go south' or command.lower() == 'south'):
-        #checks in the key is in the inventory to open the door
-        if('key' in inv):
-            print("You use the key to open the door.")
-            time.sleep(1)
-            print("It reveals a stairway to the outside and you walk out")
-            time.sleep(1)
-            print("\nCongratulations. Thank you for playing")
-        else:
-            os.system('cls')
-            print("This door is locked you cannot enter.\n")
-            time.sleep(1)
-            startingroom(inv)
-    elif(command.lower() == 'look'):
-        os.system('cls')
-        print("The room is empty and dark with a cold draft.\n")
-        time.sleep(1)
-        startingroom(inv)
-        
-#room west of starting room       
-def candleroom(inv):
-    print("--Candle Room")
-    print("Obvious Exits: 'East'")
-    print("Visible Items: 'Unlit candles in the corner'")
-    print("<--------------------------------------------------------------------------->")    
+class Room:
+    def __init__(self, name, description, directions, roominv):
+        self.name = name
+        self.description = description
+        self.directions = directions
+        self.roominv = roominv
 
-    commands = ['go east', 'east', 'look']
-    command = selectchoice(commands)
+def prompt():
+    print("\n=============================")
+    print("Please enter a command")
 
-    if(command.lower() == 'go east' or command.lower() == 'east'):
-        os.system('cls')
-        print("You head East\n")
-        time.sleep(1)
-        startingroom(inv)
-    elif(command.lower() == 'look'):
-        os.system('cls')
-        print("This room is pitch black but you can faintly see candles in the corner of the room\n")
-        time.sleep(1)
-        candleroom(inv)
+    available_commands = ['quit','look']
+    #Adds the available exits to the array of available commands
+    available_commands.extend(world[character.location].directions.keys())
+    command = input("> ").lower()
+    if command not in available_commands:
+        print(f"\nUnknown command, try one of {available_commands}")
+        return
+    if command.lower() == 'quit':
+        sys.exit()
+    elif command == "look":
+        print(world[character.location].name + ': ' + world[character.location].description)
+    elif command in world[character.location].directions.keys():
+        if character.location == "starting" and command == "south":
+            if "key" not in character.inv:
+                print("The door is locked! You need a key")
+                return
+            else:
+                character.game_over = True
+                game_over()
+        destination = world[character.location].directions[command]
+        movement_handler(destination)
 
-#room east of starting room
-def saferoom(inv):
-    print("--Mystery Room")
-    print("Obvious Exits: 'East' 'West'")
-    print("Visible Items: 'Hole in the wall'")
-    print("<--------------------------------------------------------------------------->")
+def movement_handler(destination):
+    print("\nYou head to the " + world[destination].name + ".")
+    character.location = destination
 
-    commands = ['go east', 'east', 'go west', 'west', 'look']
-    command = selectchoice(commands)
+    print("Obvious Exits:", list(world[character.location].directions.keys()))
 
-    if(command.lower() == 'go east' or command.lower() == 'east'):
-        os.system('cls')
-        print("You head East\n")
-        time.sleep(1)
-        deskroom(inv)
-    elif(command.lower() == 'go west' or command.lower() == 'west'):
-        os.system('cls')
-        print("You head West\n")
-        time.sleep(1)
-        startingroom(inv)
-    elif(command.lower() == 'look'):
-        os.system('cls')
-        print("The walls are covered in mould. There is a strange hole in the wall, you cant see where it leads\n")
-        time.sleep(1)
-        saferoom(inv)
-    
-#room east of saferoom
-def deskroom(inv):
-    print("--Office Room")
-    print("Obvious Exits: 'West'")
-    print("Visible Items: 'Desk'")
-    print("<--------------------------------------------------------------------------->")    
+#Runs until game is complete
+def main_game_loop():
+    while character.game_over is False:
+        prompt()
 
-    commands = ['go west', 'west', 'look']
-    command = selectchoice(commands)
+#'Main Menu' of the game, runs before the main loop
+def start_game():
+    question1 = ("What would you like to name your character?\n")
+    message_write(question1)
 
-    if(command.lower() == 'go west' or command.lower() == 'west'):
-        os.system('cls')
-        print("You head West\n")
-        time.sleep(1)
-        saferoom(inv)
-    elif(command.lower() == 'look'):
-        os.system('cls')
-        print("The room is tiled and has a desk on the far side of the room.")
-        time.sleep(1)
-        deskroom(inv)
+    character_name = input("> ")
+    character.name = character_name
 
-#room north of starting room
-def skullroom(inv):
-    print("--Skull Room")
-    print("Obvious Exits: 'South'")
-    print("Visible Items: 'Circular Skull in nest of bones'")
-    print("<--------------------------------------------------------------------------->")
+    welcome = "\nWelcome " + character_name
+    message_write(welcome)
+    speech1 = "\nYou awake in a dark room with no memory of how you got there.\n"
+    speech2 = "You must find a way out or be stuck forever.\n"
+    speech3 = "You see 4 exits, North, East, West and a locked door South."
+    message_write(speech1)
+    message_write(speech2)
+    message_write(speech3)
 
-    commands = ['go south', 'south', 'look']
-    command = selectchoice(commands)
+    time.sleep(0.5)
+    print('\n')
+    print("#############")
+    print("#   START   #")
+    print("#############")
 
-    if(command.lower() == 'go south' or command.lower() == 'south'):
-        os.system('cls')
-        print("You head South\n")
-        time.sleep(1)
-        startingroom(inv)
-    elif(command.lower() == 'look'):
-        os.system('cls')
-        print("The room has a damp ground and a horrible smell.\nThere is a circular looking skull nested upon bones.\n")
-        time.sleep(1)
-        skullroom(inv)
+    main_game_loop()
 
-def selectchoice(commands):
-    choice = input("\n> ")
-    if choice.lower() in commands:
-        return choice.lower()
-    elif choice.lower() == 'quit':
-        exit(0)
-    elif choice.lower() == 'help':
-        os.system('cls')
-        print("Try:", *commands, sep = ',')
-        print('\n')
-        time.sleep(1)
-        startingroom(inv)
-    else:
-        print('Invalid input')
-        return selectchoice(commands)
+#Function which gives the message the writing effect in the console
+def message_write(message):
+    for char in message:
+        sys.stdout.write(char)
+        sys.stdout.flush()
+        time.sleep(0.02)
 
-#users inventory
-inv = []
+def game_over():
+    pass
 
-#start
-print("Welcome to my first ever text based game\n")
-time.sleep(1)
-input("Press any key to continue...")
-os.system('cls')
+#Creation of all the rooms
+world = {
+    "starting": Room("Starting Room", "You are in a dark room with nothing around", { "west": "candle", "north": "skull", "east": "safe", "south": "game over" }, []),
+    "candle": Room("Candle Room", "It is cold but there are unlit candles in the corner of the room", { "east": "starting" }, []),
+    "skull": Room("Skull Room", "It is muggy, a skull lays on a pile of bones in the corner", { "south": "starting" }, []),
+    "safe": Room("Mystery Room", "Floor is damp and theres a weirdly specific hole in the wall", { "west": "starting", "east": "office" }, []),
+    "office": Room("Office Room", "There is a desk on the far side of the room", { "west": "safe" }, [])
+    }
 
-print("You find yourself in a dark room with nothing on you.\nThere is a locked door south and 3 other exits which are open.")
-print("\nIf you need help with commands type 'help'")
-print("<--------------------------------------------------------------------------->")
-startingroom(inv)
+character = Adventurer("starting")
+
+start_game()
