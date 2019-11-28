@@ -1,174 +1,212 @@
-import os
-import time
-import sys
+import json
 
-
-class Adventurer:
-    def __init__(self, starting):
-        self.name = ''
-        self.inv = []
-        self.location = starting
-        self.game_over = False
-
-class Item:
-    def __init__(self, name, info, location):
+class Character(object):
+    def __init__(self, name, location, inv):
         self.name = name
-        self.info = info
-        self.location = world[location]
+        self.location = location
+        self.inv = inv
+        self.escaped = False
 
-    def pickup():
-        message_write("\nWhat item would you like to pickup?")
-        message_write("\nWrite 'back' to cancel")
-        item = input("\n> ").lower()
-        available_items = world[character.location].roominv
-        if(item == "back"):
-            message_write("\nYou have gone back")
-            return
-        while item not in world[character.location].roominv:
-            if(item == "back"):
-                message_write("\nYou have gone back")
-                return
-            message_write(f"\nItem is not valid try {available_items}")
-            item = input("\n> ")
-        print(f"You have picked up {items[item].name}")
-        character.inv.append(item)
-        world[character.location].roominv.remove(item)
+    def drop(self, item):
+        self.inv.remove(item)
+        self.location.inv.append(item)
+        print(f"You have dropped: {item}")
 
-    def use(item):
-        while (item not in character.inv) or (item == 'back'):
-            message_write("\nNot a valid item try again")
-            message_write("\nWrite 'back' to cancel")
-            item = input("\n> ").lower()
-        if item == 'back':
-            message_write("\nYou have gone back")
-            return
-        elif item == 'ciggarette':
-            if 'lighter' in character.inv:
-                message_write("\nYou smoke the ciggarette and throw it on the floor")
-                character.inv.remove('ciggarette')
-                return
-            else:
-                message_write("\nYou need something to light this")
-                return
+    def pickup(self, item):
+        self.inv.append(item)
+        self.location.inv.remove(item)
+        print(f"You have picked up: {item}")
 
+    def use(self, item):
+        pass
 
-class Room:
-    def __init__(self, name, description, directions, roominv):
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return str(self)
+    
+class Room(object):
+    def __init__(self, name, description, inv, exits):
         self.name = name
         self.description = description
-        self.directions = directions
-        self.roominv = roominv
+        self.inv = inv
+        self.exits = exits
 
-def prompt():
-    print("\n=============================")
-    print("Please enter a command")
+    def look(self):
+        return self.description
 
-    available_commands = ['quit','look','pickup','inv','use']
-    #Adds the available exits to the array of available commands
-    available_commands.extend(world[character.location].directions.keys())
-    command = input("> ").lower()
-    if command not in available_commands:
-        print(f"\nUnknown command, try one of {available_commands}")
-        return
-    #quit
-    if command.lower() == 'quit':
-        sys.exit()
-    #look
-    elif command == "look":
-        print(world[character.location].name + ': ' + world[character.location].description)
-    #pickup
-    elif command == "pickup":
-        if len(world[character.location].roominv) == 0:
-            message_write("\nThere is nothing to pick up, try another room")
-        else:
-            Item.pickup()
-    #inv
-    elif command == "inv":
-        print(character.inv)
-    #movement
-    elif command in world[character.location].directions.keys():
-        if character.location == "starting" and command == "south":
-            if "key" not in character.inv:
-                print("The door is locked! You need a key")
-                return
-            else:
-                character.game_over = True
-                game_over()
-        destination = world[character.location].directions[command]
-        movement_handler(destination)
-    #use items
-    elif command == 'use':
-        if len(character.inv) == 0:
-            message_write("\nYour inventory is empty, try and find something to use!")
-        else:
-            message_write(f"\nWhat item would you like to use: {character.inv}")
-            message_write("\nWrite 'back' to cancel")
-            item = input("\n> ").lower()
-            Item.use(item)
+    def __str__(self):
+        return self.name + ' room'
 
-#changes the location of the character and describes the next location
-def movement_handler(destination):
-    print("\nYou head to the " + world[destination].name + ".")
-    character.location = destination
+    def __repr__(self):
+        return str(self)
 
-    print("Obvious Exits:", list(world[character.location].directions.keys()))
-    if len(world[character.location].roominv) == 0:
-        print("Visible Items: None")
+class Item(object):
+    def __init__(self, name, description):
+        self.name = name
+        self.description = description
+
+    def look(self):
+        return self.description
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return str(self)
+
+#Rooms
+starting = Room('starting', 'Dark and moist', ['key'], {'w': 'candle', 'n': 'skull', 'e': 'cold'})
+candle = Room('candle', 'There are unlit candles in the corner', [], {'e': 'starting'})
+cold = Room('cold', 'It is cold, although there is a weird hole in the wall', [], {'w': 'starting', 'e': 'office'})
+office = Room('office', 'There is a desk on the far side of the room', [], {'w': 'cold'})
+skull = Room('skull', 'There is a skull in the corner', [], {'s': 'starting'})
+
+world = {'starting': starting,
+         'candle': candle,
+         'cold': cold,
+         'office': office,
+         'skull': skull}
+#Items
+rskull = Item('skull', 'A pretty smooth skull')
+lighter = Item('lighter', 'It is full of gas')
+ciggarette = Item('ciggarette', 'Looks good enough to smoke')
+bone = Item('bone', 'It is dirty')
+key = Item('key', 'It is shiny')
+
+items = {'skull': rskull,
+         'lighter': lighter,
+         'ciggarette': ciggarette,
+         'bone': bone,
+         'key': key}
+
+def movement(direction, character): 
+    newLocation = world[character.location.exits[direction]]
+    character.location = newLocation
+
+    print('--------------------')
+    print('Location:', character.location)        
+    print('Obvious Exits:', ', '.join(directions(character)))
+    print('Visible Items:', visibleItems(character))
+
+def directions(character):
+    #Movement directions character can go  
+    directions = []
+    for k in character.location.exits.keys():
+        if k == 'w':
+            directions.append('west')
+        if k == 'e':
+            directions.append('east')
+        if k == 'n':
+            directions.append('north')
+        if k == 's':
+            directions.append('south')
+    return directions
+
+def visibleItems(character):
+    if len(character.location.inv) == 0:
+        return 'None'
     else:
-        print("Visible Items: ", world[character.location].roominv)
+        return ', '.join(character.location.inv)
+    
+def prompt(character):
+    command = input("\n> ").lower()
+    validCommands = ['w', 'west', 'e', 'east', 'n', 'north', 's', 'south', 'help', 'quit', 'look', 'drop', 'pickup']
 
-#Runs until game is complete
-def main_game_loop():
-    while character.game_over is False:
-        prompt()
+    #adds the commends for look, drop and pickup
+    for x in character.inv:
+        validCommands.append('look ' + x)
+        validCommands.append('drop ' + x)
+    for x in character.location.inv:
+        validCommands.append('pickup ' + x)
+    
+    if command in validCommands:
+        #MOVEMENT
+        if command in ['w', 'west', 'e', 'east', 'n', 'north', 's', 'south'] and command not in directions(character):
+            print('\nYou cannot go in this direction')
+        if command in directions(character) or command in character.location.exits.keys():
+            if command == 'w' or command == 'west':
+                movement('w', character)
+            elif command == 'e' or command == 'east':
+                movement('e', character)
+            elif command == 'n' or command == 'north':
+                movement('n', character)
+            elif command == 's' or command == 'south':
+                movement('s', character)
+        #LOOK ROOM
+        if len(command.split()) == 1 and command == 'look':
+            print(character.location.look())
+        #LOOK ITEMS
+        if len(command.split()) == 2 and command.split()[0] == 'look':
+            if command.split()[1] in items.keys():
+                print(items[command.split()[1]].look())
+        #PICKUP
+        if len(command.split()) == 1 and command == 'pickup':
+            if len(character.location.inv) == 0:
+                print("\nThere is nothing to pickup.")
+            else:
+                print("\nWhat item would you like to pickup?")
+                print("Type 'back' to cancel.")
+                item = input("> ")
+                while item not in character.location.inv and item != 'back':
+                    print("\nThat item is not here.")
+                    item = input("> ")
+                if item == 'back':
+                    print("\nGone back")
+                else:
+                    character.pickup(item)
+        if len(command.split()) == 2 and 'pickup' in command:
+            if len(character.location.inv) == 0:
+                print("\nThere is nothing to pickup.")
+            else:
+                if command.split()[1] in character.location.inv:
+                    character.pickup(command.split()[1])
+        #DROP
+        if len(command.split()) == 1 and command == 'drop':
+            if len(character.inv) == 0:
+                print("\nThere is nothing to drop.")
+            else:
+                print("\nWhat item would you like to drop?")
+                print("Type 'back' to cancel.")
+                item = input("> ")
+                while item not in character.inv and item != 'back':
+                    print("\nThat item is not here.")
+                    item = input("> ")
+                if item == 'back':
+                    print("\nGone back")
+                else:
+                    character.drop(item)
+        if len(command.split()) == 2 and 'drop' in command:
+            if len(character.inv) == 0:
+                print("\nThere is nothing to drop.")
+            else:
+                if command.split()[1] in character.inv:
+                    character.drop(command.split()[1])   
+        #USE
+        
+        #HELP
+        if command == 'help':
+            print('Try:', ', '.join(validCommands))
+            print('You can only look at items in your inventory')
+        #QUIT
+        if command == 'quit':
+            quit()
+    else:
+        print('\nThat is not a command if you dont know the commands, try "Help".')
 
-#'Main Menu' of the game, runs before the main loop
-def start_game():
-    question1 = ("What would you like to name your character?\n")
-    message_write(question1)
+def main():      
+    character = Character('Daniel', starting, ['key'])
 
-    character_name = input("> ")
-    character.name = character_name
+    print(F"Welcome {character.name}")
+    
+    print('--------------------')
+    print('Location:', character.location)        
+    print('Obvious Exits:', ', '.join(directions(character)))
+    print('Visible Items:', visibleItems(character))
 
-    welcome = "\nWelcome " + character_name
-    message_write(welcome)
+    while character.escaped == False:
+        prompt(character)
 
-    message_write("\nYou awake in a dark room with no memory of how you got there.\n")
-    message_write("You must find a way out or be stuck forever.\n")
-    message_write("You see 4 exits, North, East, West and a locked door South.")
-    print("\n")
+main()
 
-    available_commands = ['quit','look','pickup','inv','use']
-    available_commands.extend(world[character.location].directions.keys())
-    print("Try: ", available_commands)
-
-    main_game_loop()
-
-#Function which gives the message the writing effect in the console
-def message_write(message):
-    for char in message:
-        sys.stdout.write(char)
-        sys.stdout.flush()
-        time.sleep(0.02)
-
-def game_over():
-    pass
-
-#Creation of all the rooms and items in a dictionary
-world = {
-    "starting": Room("Starting Room", "You are in a dark room with nothing around", { "west": "candle", "north": "skull", "east": "safe", "south": "game over" }, []),
-    "candle": Room("Candle Room", "It is cold but there are unlit candles in the corner of the room", { "east": "starting" }, []),
-    "skull": Room("Skull Room", "It is muggy, a skull lays on a pile of bones in the corner", { "south": "starting" }, ["skull"]),
-    "safe": Room("Mystery Room", "Floor is damp and theres a weirdly specific hole in the wall", { "west": "starting", "east": "office" }, []),
-    "office": Room("Office Room", "There is a desk on the far side of the room", { "west": "safe" }, ["ciggarette", "lighter"])
-    }
-
-items = {
-    "ciggarette": Item("Ciggarette", "Bit dirty, but still smokable", "office"),
-    "lighter": Item("Lighter", "Gas is suprisingly full", "office"),
-    "skull": Item("Rounded Skull", "Has some cracks but pretty smooth", "skull")
-    }
-
-character = Adventurer("starting")
-
-start_game()
